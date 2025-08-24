@@ -26,10 +26,10 @@ export async function nlToSqlSafe(
   if (!dataSource) {
     throw new Error(`Invalid dataSourceId: ${dataSourceId}`);
   }
-
+  console.log('dataSource', dataSource);
   // Ask BigQuery AI to generate SQL
   const raw = await generateSqlFromPrompt(
-    `${nl}. Only use table \`${dataSource.projectId}.${dataSource.dataset}.${dataSource.table}\``
+    `${nl}. Only use table \`${dataSource.projectId}.${dataSource.dataset}.${dataSource.table}\``,dataSourceId
   );
 
   // Guardrails to prevent dangerous SQL

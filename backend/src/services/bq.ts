@@ -4,15 +4,45 @@ import fs from 'fs';
 import path from 'path';
 import { store } from '../store';
 
-const USE_MOCK = process.env.USE_MOCK || false;
+const USE_MOCK = process.env.USE_MOCK || true;
 const LOCATION = process.env.BQ_LOCATION || 'US';
-const LLM_MODEL = process.env.LLM_MODEL || 'bqai_llm.text_bison'
+const LLM_MODEL = process.env.LLM_MODEL || 'my_bqml_dataset.text_model'
+
+export const MOCK_DATA = {
+  shakespeare: [
+    { x: 'Hamlet', y: 120, description: 'Famous for existential angst and drama' },
+    { x: 'Macbeth', y: 150, description: 'Power, ambition, and witches galore' },
+    { x: 'Othello', y: 90, description: 'Tragedy of jealousy and betrayal' },
+    { x: 'King Lear', y: 110, description: 'Epic family drama and madness' },
+  ],
+  covid: [
+    { x: '2023-01', y: 2000, description: 'Cases start the year high' },
+    { x: '2023-02', y: 1800, description: 'Slight dip as vaccination improves' },
+    { x: '2023-03', y: 2200, description: 'Cases spike due to new variants' },
+  ],
+  citibike: [
+    { x: 'Station A', y: 300, description: 'Busy downtown hub' },
+    { x: 'Station B', y: 500, description: 'High traffic near subway' },
+    { x: 'Station C', y: 150, description: 'Quieter residential area' },
+  ],
+};
+
+export function getMockData(datasetId: keyof typeof MOCK_DATA) {
+  return MOCK_DATA[datasetId];
+}
+
+
 
 let bq: BigQuery | null = null;
 if (!USE_MOCK) {
-  const credentials = process.env.GCP_SERVICE_ACCOUNT
-    ? JSON.parse(process.env.GCP_SERVICE_ACCOUNT)
-    : JSON.parse(fs.readFileSync(path.resolve('service-account.json'), 'utf-8'));
+  const credentialsPath = path.resolve('service-account.json');
+  if (!fs.existsSync(credentialsPath)) {
+    throw new Error('service-account.json not found in project root');
+  }
+
+  const credentials = JSON.parse(fs.readFileSync(credentialsPath, 'utf-8'));
+
+
   bq = new BigQuery({
     // keyFilename: 'service-account.json',
     credentials: credentials,
@@ -34,13 +64,7 @@ export async function runSQL(
   params?: Record<string, any>
 ): Promise<any[]> {
   if (USE_MOCK) {
-    return [
-      { x: 'Jan', y: 12000 },
-      { x: 'Feb', y: 15000 },
-      { x: 'Mar', y: 13000 },
-      { x: 'Apr', y: 17000 },
-      { x: 'May', y: 16500 }
-    ];
+    return dataSourceId ? getMockData(dataSourceId as any) : [];
   }
 
   let query = sql;
@@ -68,16 +92,19 @@ export async function generateSqlFromPrompt(prompt: string, dataSourceId?: strin
   if (USE_MOCK) {
     return `SELECT 'US' AS x, 3200 AS y UNION ALL SELECT 'IN', 2800 UNION ALL SELECT 'UK', 1500`;
   }
-
   const query = `
-    SELECT ML.GENERATE_TEXT(
-      MODEL \`${LLM_MODEL}\`,
-      STRUCT(@p AS prompt)
-    ) AS sql_query
+    SELECT
+      ml_generate_text_result.candidates[0].output_text AS sql_query
+    FROM
+      ML.GENERATE_TEXT(
+        MODEL \`${LLM_MODEL}\`,
+        (SELECT @p AS prompt)
+      )
   `;
 
+  
   const allowedDatasets = dataSourceId ? getTableFqn(dataSourceId) : process.env.ALLOWED_DATASETS;
-
+  
   const [rows] = await bq!.query({
     query,
     location: LOCATION,

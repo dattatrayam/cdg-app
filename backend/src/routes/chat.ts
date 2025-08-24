@@ -18,9 +18,11 @@ router.get('/:id/messages', (req, res) => {
 router.post('/:id/messages', async (req, res) => {
   const { id } = req.params;
   const { message } = req.body as { message: string };
+  console.log('message', message);
   if (!message) return res.status(400).json({ error: 'message is required' });
 
   let session = store.getSession(id);
+  console.log('session', session);
   if (!session) return res.status(404).json({ error: 'Session not found' });
 
   try {
@@ -28,6 +30,8 @@ router.post('/:id/messages', async (req, res) => {
 
     // Use session.dataSourceId when running SQL
     const { sql, explanation } = await nlToSqlSafe(message, session.dataSourceId || '');
+    console.log('sql', sql);
+    console.log('explanation', explanation);
     const rows = await runSQL(sql, session.dataSourceId);
     const chart = toChartPayload('Result', rows);
 
