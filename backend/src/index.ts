@@ -6,7 +6,7 @@ import insights from './routes/insights';
 import ml from './routes/ml';
 import sql from './routes/sql';
 import dataSourcesRouter from './routes/dataSources';
-
+import 'dotenv/config';
 
 
 const app = express();

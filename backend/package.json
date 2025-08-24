@@ -4,13 +4,15 @@
   "type": "commonjs",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "nodemon --watch src --ext ts --exec ts-node src/index.ts",
+   "dev": "nodemon --watch src --ext ts --exec ts-node src/index.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "postinstall": "npm run build"
   },
   "dependencies": {
     "@google-cloud/bigquery": "^7.7.0",
     "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
     "express": "^4.19.2",
     "nanoid": "^3.3.11"
   },
